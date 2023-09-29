@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "MkdgWz8O25g3bcy4RV1lqnVeL62VJ/IAHmehf2Ccnr4=",
+  "Source": "VerifyEmailAndForgetPassword",
+  "BasePath": "_content/VerifyEmailAndForgetPassword",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
