@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 using System.Security.Cryptography;
 using VerifyEmailAndForgetPassword.Data;
 using VerifyEmailAndForgetPassword.Models;
@@ -45,20 +47,63 @@ namespace VerifyEmailAndForgetPassword.Controllers
             return Ok("Registration success");
         }
 
+        [HttpPost("login")]
+        public async Task<IActionResult> Login(UserLoginRequest request)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+            if (user == null)
+            {
+                return BadRequest("User not found.");
+            }
+
+            if (!VerifyPasswordHash(request.Password, user.PasswordHash, user.PasswordSalt))
+            {
+                return BadRequest("Password is incorrect.");
+            }
+
+            if (user.VerifiedAt == null)
+            {
+                return BadRequest("Please verify your account.");
+            }
+
+            return Ok($"Welcome back, {user.Email}! :)");
+        }
+
+        [HttpPost("verify")]
+        public async Task<IActionResult> Verify(string token)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.VerificationToken == token);
+
+            if (user == null)
+            {
+                return BadRequest("Invalid token.");
+            }
+
+            user.VerifiedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Ok("User verified! :)");
+        }
+
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512()) 
             {
                 passwordSalt = hmac.Key;
                 passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-                // If you use this algorithm with or without Salt everytime
-                // then same password will give same passwordHash
-                // Hackers can get the passwordHash and get plain password
-                // It is not secure.
+            }
+        }
 
-                // But using passwordSalt with hmac.Key(random key) result is
-                // passwordHash will be different even password is same
-                // Why we store salt - to verify the given password is correct
+        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
+        {
+            using(var hmac = new HMACSHA512(passwordSalt))
+            {
+                var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                return computedHash.SequenceEqual(passwordHash);
+                // We use SequenceEqual because its byte array, this will compare
+                // those arrays byte by byte
+                // Simple equal won't be work
             }
         }
 
